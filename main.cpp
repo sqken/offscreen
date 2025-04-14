@@ -1,87 +1,73 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQuickRenderControl>
-#include <QQuickWindow>
-#include <QQuickItem>
 #include <QQmlComponent>
-#include <QBuffer>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QImage>
 #include <QDir>
-#include <QDebug>
 #include <QTimer>
-#include <QPainter>
+#include <QDebug>
 #include <QQmlContext>
-#include <QOpenGLFramebufferObject>
+#include <QFile>
+#include <QQuickRenderControl>
 #include <QOffscreenSurface>
-#include <QQuickGraphicsDevice>
-#include <QQuickRenderTarget>
-#include <QSurfaceFormat>
-#include <QOpenGLContext>
-#include <QOpenGLFunctions>
-
-// 添加Qt配置条件
-#if QT_CONFIG(opengl)
-// OpenGL相关代码被启用
-#endif
+#include <QDateTime>
 
 class OffscreenRenderer : public QObject
 {
     Q_OBJECT
 
 public:
-    OffscreenRenderer(const QUrl &qmlSource, QObject *parent = nullptr)
+    OffscreenRenderer(QObject *parent = nullptr)
         : QObject(parent)
-        , m_renderControl(new QQuickRenderControl(this))
-        , m_quickWindow(new QQuickWindow(m_renderControl))
-        , m_engine(new QQmlEngine(this))
     {
-        // 创建OpenGL上下文
-        m_context = new QOpenGLContext();
-        m_context->setFormat(QSurfaceFormat::defaultFormat());
-        m_context->create();
+        // 创建QML引擎
+        m_engine = new QQmlEngine(this);
         
-        // 创建离屏表面
-        m_offscreenSurface = new QOffscreenSurface();
-        m_offscreenSurface->setFormat(m_context->format());
-        m_offscreenSurface->create();
-        
-        // 使OpenGL上下文成为当前上下文
-        m_context->makeCurrent(m_offscreenSurface);
-        
-        // 创建渲染目标
-        m_quickWindow->setWidth(800);
-        m_quickWindow->setHeight(600);
-        m_quickWindow->setColor(Qt::white);
-        
-        // 设置渲染设备
-        QQuickGraphicsDevice device = QQuickGraphicsDevice::fromOpenGLContext(m_context);
-        m_quickWindow->setGraphicsDevice(device);
-
-        // 确保引擎和窗口连接
-        m_engine->rootContext()->setContextProperty("_window", m_quickWindow);
+        // 检查资源文件
+        QFile imageFile(":/assets_0/Component/park_in_space.png");
+        if (imageFile.exists()) {
+            qDebug() << "图片文件存在:" << imageFile.fileName();
+        } else {
+            qWarning() << "图片文件不存在:" << imageFile.fileName();
+        }
         
         // 加载QML
-        QQmlComponent component(m_engine, qmlSource);
+        QQmlComponent component(m_engine, QUrl(QStringLiteral("qrc:/main.qml")));
         if (component.isError()) {
-            for (const QQmlError &error : component.errors())
-                qWarning() << error.toString();
+            for (const QQmlError &error : component.errors()) {
+                qWarning() << "QML错误:" << error.toString();
+            }
             return;
         }
+        
+        // 创建顶级窗口
+        m_window = new QQuickWindow();
+        m_window->setWidth(800);
+        m_window->setHeight(600);
+        m_window->setColor(Qt::white);
         
         // 创建根项目
         m_rootItem = qobject_cast<QQuickItem*>(component.create());
         if (!m_rootItem) {
-            qWarning() << "Failed to create root item";
+            qWarning() << "创建根项目失败";
+            if (component.isError()) {
+                for (const QQmlError &error : component.errors()) {
+                    qWarning() << "QML创建错误:" << error.toString();
+                }
+            }
             return;
         }
         
-        // 设置尺寸
-        m_rootItem->setParentItem(m_quickWindow->contentItem());
-        m_rootItem->setWidth(m_quickWindow->width());
-        m_rootItem->setHeight(m_quickWindow->height());
+        qDebug() << "QML根项目创建成功";
         
-        // 初始化渲染控制
-        m_renderControl->initialize();
+        // 设置尺寸和父项
+        m_rootItem->setParentItem(m_window->contentItem());
+        m_rootItem->setWidth(m_window->width());
+        m_rootItem->setHeight(m_window->height());
+        
+        // 使窗口可见但不显示
+        m_window->setVisibility(QWindow::Hidden);
         
         // 创建定时器，每秒触发一次渲染
         m_timer = new QTimer(this);
@@ -93,90 +79,95 @@ public:
     }
     
     ~OffscreenRenderer() {
-        if (m_context && m_context->makeCurrent(m_offscreenSurface)) {
-            delete m_fbo;
-            m_context->doneCurrent();
-        }
-        
         delete m_rootItem;
-        delete m_quickWindow;
-        delete m_renderControl;
-        delete m_offscreenSurface;
-        delete m_context;
+        delete m_window;
     }
 
 public slots:
     void render() {
-        if (!m_rootItem || !m_context)
+        if (!m_rootItem || !m_window) {
+            qWarning() << "渲染失败：根项目或窗口为空";
             return;
-            
-        // 使OpenGL上下文成为当前上下文
-        m_context->makeCurrent(m_offscreenSurface);
-            
-        // 同步场景图
-        m_renderControl->polishItems();
-        m_renderControl->sync();
-        
-        // 创建帧缓冲对象
-        QSize size = m_quickWindow->size();
-        if (!m_fbo || m_fbo->size() != size) {
-            delete m_fbo;
-            QOpenGLFramebufferObjectFormat format;
-            format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-            format.setSamples(4);
-            m_fbo = new QOpenGLFramebufferObject(size, format);
         }
         
-        // 设置渲染目标 - 使用Qt 6.7.2中正确的API
-        QQuickRenderTarget renderTarget = QQuickRenderTarget::fromOpenGLTexture(m_fbo->texture(), size, m_fbo->format().samples());
-        m_quickWindow->setRenderTarget(renderTarget);
+        qDebug() << "开始渲染...";
         
-        // 渲染
-        m_renderControl->render();
+        // 确保窗口更新
+        m_window->update();
         
-        // 读取渲染结果
-        QImage image = m_fbo->toImage();
+        // 让QML引擎处理待处理的操作
+        QCoreApplication::processEvents();
         
-        // 结束当前上下文
-        m_context->doneCurrent();
+        // 以下是关键操作，使用QQuickWindow内置的抓取功能
+        QImage image = m_window->grabWindow();
+        
+        // 确保图像不为空
+        if (image.isNull()) {
+            qWarning() << "生成的图像为空!";
+            return;
+        }
+        
+        qDebug() << "图像获取成功，大小:" << image.size() << "格式:" << image.format();
+        
+        // 获取当前时间作为文件名的一部分
+        QString timeStr = QDateTime::currentDateTime().toString("HHmmss");
         
         // 保存为BMP文件
         QString savePath = QDir::currentPath() + "/offscreen_output.bmp";
         if (image.save(savePath, "BMP")) {
-            qDebug() << "Image saved to:" << savePath;
+            qDebug() << "图像保存成功:" << savePath;
         } else {
-            qWarning() << "Failed to save image to:" << savePath;
+            qWarning() << "保存图像失败:" << savePath;
+        }
+        
+        // 同时保存PNG版本
+        QString pngPath = QDir::currentPath() + "/offscreen_output.png";
+        if (image.save(pngPath, "PNG")) {
+            qDebug() << "PNG图像保存成功:" << pngPath;
+        } else {
+            qWarning() << "保存PNG图像失败:" << pngPath;
         }
     }
     
 private:
-    QQuickRenderControl *m_renderControl;
-    QQuickWindow *m_quickWindow;
     QQmlEngine *m_engine;
+    QQuickWindow *m_window;
     QQuickItem *m_rootItem;
     QTimer *m_timer;
-    QOffscreenSurface *m_offscreenSurface = nullptr;
-    QOpenGLContext *m_context = nullptr;
-    QOpenGLFramebufferObject *m_fbo = nullptr;
 };
 
 int main(int argc, char *argv[])
 {
-    // 设置OpenGL上下文
-    QSurfaceFormat format;
-    format.setRenderableType(QSurfaceFormat::OpenGL);
-    format.setProfile(QSurfaceFormat::CoreProfile);
-    format.setVersion(4, 1);
-    format.setStencilBufferSize(8);
-    format.setDepthBufferSize(24);
-    QSurfaceFormat::setDefaultFormat(format);
+    // 启用高DPI支持
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     
-    QGuiApplication app(argc, argv); // 创建 Qt 应用程序对象
+    QGuiApplication app(argc, argv);
+    
+    // 获取当前目录
+    qDebug() << "当前工作目录:" << QDir::currentPath();
+    
+    // 检查资源文件
+    QDir resourceDir(":/");
+    qDebug() << "资源目录内容:";
+    for (const QString &entry : resourceDir.entryList()) {
+        qDebug() << "  " << entry;
+    }
+    
+    QDir assetsDir(":/assets_0");
+    if (assetsDir.exists()) {
+        qDebug() << "资源assets_0目录内容:";
+        for (const QString &entry : assetsDir.entryList()) {
+            qDebug() << "  " << entry;
+        }
+    } else {
+        qWarning() << "资源assets_0目录不存在!";
+    }
     
     // 创建离屏渲染器
-    OffscreenRenderer renderer(QUrl(QStringLiteral("qrc:/main.qml")));
+    OffscreenRenderer renderer;
     
-    return app.exec(); // 启动 Qt 事件循环
+    return app.exec();
 }
 
 #include "main.moc"

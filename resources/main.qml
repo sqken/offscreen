@@ -8,34 +8,76 @@ Rectangle {
     height: 600
     color: "white"
 
-    // 中间显示图片
+    // 添加一个测试矩形，确认渲染正常
+    Rectangle {
+        id: testRect
+        width: 200
+        height: 200
+        color: "red"
+        anchors.centerIn: parent
+    }
+
+    // 中间显示图片 - 使用完整路径
     Image {
         id: centerImage
-        source: "assets_0/Component/park_in_space.png"
+        source: "qrc:/assets_0/Component/park_in_space.png"
         anchors.centerIn: parent
-        width: sourceSize.width
-        height: sourceSize.height
+        width: 300
+        height: 300
+        visible: true
+        
+        // 添加调试信息
+        onStatusChanged: {
+            if (status === Image.Ready) {
+                console.log("图片加载成功:", source)
+                console.log("图片尺寸:", sourceSize.width, "x", sourceSize.height)
+            } else if (status === Image.Error) {
+                console.log("图片加载失败:", source)
+            } else if (status === Image.Loading) {
+                console.log("图片正在加载:", source)
+            }
+        }
     }
 
     // 右上角显示时间
-    Text {
-        id: timeDisplay
+    Rectangle {
+        id: timeBackground
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.margins: 20
-        font.pixelSize: 24
-        color: "black"
+        anchors.margins: 10
+        width: 120
+        height: 40
+        color: "lightblue"
         
-        // 定时更新时间文本
-        Timer {
-            interval: 1000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: {
+        Text {
+            id: timeDisplay
+            anchors.centerIn: parent
+            font.pixelSize: 24
+            color: "black"
+            
+            // 确保时间立即显示
+            text: {
                 var date = new Date();
-                timeDisplay.text = Qt.formatDateTime(date, "hh:mm:ss");
+                return Qt.formatDateTime(date, "hh:mm:ss");
+            }
+            
+            // 定时更新时间文本
+            Timer {
+                interval: 1000
+                running: true
+                repeat: true
+                triggeredOnStart: true
+                onTriggered: {
+                    var date = new Date();
+                    timeDisplay.text = Qt.formatDateTime(date, "hh:mm:ss");
+                    console.log("时间更新:", timeDisplay.text);
+                }
             }
         }
+    }
+    
+    // 添加组件加载完成信号
+    Component.onCompleted: {
+        console.log("QML组件加载完成")
     }
 }
