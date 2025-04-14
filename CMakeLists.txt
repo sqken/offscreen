@@ -23,7 +23,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找 Qt 包
-find_package(Qt6 REQUIRED COMPONENTS Core Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick Gui QuickControls2 OpenGLWidgets OpenGL)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -39,5 +39,5 @@ add_executable(${PROJECT_NAME}
 
 # 链接 Qt 库
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE Qt6::Core Qt6::Quick
+    PRIVATE Qt6::Core Qt6::Quick Qt6::Gui Qt6::QuickControls2 Qt6::OpenGLWidgets Qt6::OpenGL
 )
