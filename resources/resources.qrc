@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
-        <file>assets_0/Component/park_in_space.png</file>
+        <file>assets_0/Component/safe_belt.png</file>
         <file>assets_0/Component/DriodSansFallback.ttf</file>
     </qresource>
 </RCC>

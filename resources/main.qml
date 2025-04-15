@@ -20,10 +20,8 @@ Rectangle {
     // 中间显示图片 - 使用完整路径
     Image {
         id: centerImage
-        source: "qrc:/assets_0/Component/park_in_space.png"
+        source: "qrc:/assets_0/Component/safe_belt.png"
         anchors.centerIn: parent
-        width: 300
-        height: 300
         visible: true
         
         // 添加调试信息

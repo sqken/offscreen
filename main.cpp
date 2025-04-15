@@ -41,7 +41,7 @@ public:
         m_engine = new QQmlEngine(this);
         
         // 检查资源文件
-        QFile imageFile(":/assets_0/Component/park_in_space.png");
+        QFile imageFile(":/assets_0/Component/safe_belt.png");
         if (imageFile.exists()) {
             qDebug() << "图片文件存在:" << imageFile.fileName();
         } else {
