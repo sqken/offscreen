@@ -12,6 +12,22 @@
 #include <QQuickRenderControl>
 #include <QOffscreenSurface>
 #include <QDateTime>
+#include <QFontDatabase>
+
+// 加载字体函数
+void loadFont() {
+    QString path = ":/assets_0/Component/DriodSansFallback.ttf";
+    int id = QFontDatabase::addApplicationFont(path);
+    if (id == -1) {
+        qWarning() << "Error loading the font:" << path;
+        return;
+    }
+    QStringList families = QFontDatabase::applicationFontFamilies(id);
+    if (!families.isEmpty()) {
+        qDebug() << "set default font" << path;
+        QGuiApplication::setFont(QFont(families.at(0)));
+    }
+}
 
 class OffscreenRenderer : public QObject
 {
@@ -143,6 +159,9 @@ int main(int argc, char *argv[])
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
     
     QGuiApplication app(argc, argv);
+    
+    // 加载字体
+    loadFont();
     
     // 获取当前目录
     qDebug() << "当前工作目录:" << QDir::currentPath();
