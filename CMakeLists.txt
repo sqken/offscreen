@@ -3,21 +3,6 @@ cmake_minimum_required(VERSION 3.16)
 get_filename_component(PROJECT_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 project(${PROJECT_NAME} VERSION 1.0 LANGUAGES CXX)
 
-# set(CMAKE_PREFIX_PATH "/home/shiqing/Qt/6.5.6/gcc_64")
-
-# set(CMAKE_SYSTEM_NAME QNX)
-# set(CMAKE_SYSTEM_PROCESSOR aarch64le)
-# set(arch gcc_ntoaarch64le)
-
-# set(CMAKE_C_COMPILER qcc)
-# set(CMAKE_C_COMPILER_TARGET ${arch})
-# set(CMAKE_CXX_COMPILER q++)
-# set(CMAKE_CXX_COMPILER_TARGET ${arch})
-
-# set(CMAKE_FIND_ROOT_PATH $ENV{QNX_TARGET};$ENV{QNX_TARGET}/${CMAKE_SYSTEM_PROCESSOR})
-
-# set(CMAKE_SYSROOT $ENV{QNX_TARGET})
-
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
