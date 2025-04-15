@@ -19,6 +19,7 @@ set(CMAKE_AUTORCC ON)
 # 添加源文件
 add_executable(${PROJECT_NAME}
     main.cpp
+    OffscreenRenderer.cpp
     resources/resources.qrc
 )
 

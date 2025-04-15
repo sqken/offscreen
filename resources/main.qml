@@ -24,18 +24,6 @@ Rectangle {
         anchors.centerIn: parent
         visible: true
         
-        // 添加调试信息
-        onStatusChanged: {
-            if (status === Image.Ready) {
-                console.log("图片加载成功:", source)
-                console.log("图片尺寸:", sourceSize.width, "x", sourceSize.height)
-            } else if (status === Image.Error) {
-                console.log("图片加载失败:", source)
-            } else if (status === Image.Loading) {
-                console.log("图片正在加载:", source)
-            }
-        }
-        
         // 控制图片闪烁的计时器
         Timer {
             id: blinkTimer
