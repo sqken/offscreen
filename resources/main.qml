@@ -35,6 +35,21 @@ Rectangle {
                 console.log("图片正在加载:", source)
             }
         }
+        
+        // 控制图片闪烁的计时器
+        Timer {
+            id: blinkTimer
+            interval: 500
+            running: true
+            repeat: true
+            onTriggered: {
+                centerImage.visible = !centerImage.visible
+                console.log("图片可见性切换:", centerImage.visible)
+                
+                // 触发场景变动信号
+                root.contentChanged()
+            }
+        }
     }
 
     // 右上角显示时间
@@ -78,4 +93,7 @@ Rectangle {
     Component.onCompleted: {
         console.log("QML组件加载完成")
     }
+    
+    // 添加内容变动信号，用于通知C++保存图片
+    signal contentChanged()
 }

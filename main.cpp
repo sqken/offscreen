@@ -35,7 +35,7 @@ class OffscreenRenderer : public QObject
 
 public:
     OffscreenRenderer(QObject *parent = nullptr)
-        : QObject(parent)
+        : QObject(parent), m_pendingSave(false)
     {
         // 创建QML引擎
         m_engine = new QQmlEngine(this);
@@ -85,12 +85,16 @@ public:
         // 使窗口可见但不显示
         m_window->setVisibility(QWindow::Hidden);
         
-        // 创建定时器，每秒触发一次渲染
-        m_timer = new QTimer(this);
-        connect(m_timer, &QTimer::timeout, this, &OffscreenRenderer::render);
-        m_timer->start(1000); // 每秒更新一次
+        // 连接QML中的内容变动信号
+        QObject::connect(m_rootItem, SIGNAL(contentChanged()), 
+                         this, SLOT(onContentChanged()));
         
-        // 立即执行一次渲染
+        // 创建防抖定时器，用于避免过于频繁的保存
+        m_debounceTimer = new QTimer(this);
+        m_debounceTimer->setSingleShot(true);
+        connect(m_debounceTimer, &QTimer::timeout, this, &OffscreenRenderer::render);
+        
+        // 立即执行一次渲染，确保初始状态被保存
         QTimer::singleShot(100, this, &OffscreenRenderer::render);
     }
     
@@ -100,9 +104,27 @@ public:
     }
 
 public slots:
+    // 当QML内容变动时调用
+    void onContentChanged() {
+        qDebug() << "内容已变动，计划渲染...";
+        
+        // 设置待保存标志
+        m_pendingSave = true;
+        
+        // 启动防抖定时器，100ms内多次变动只触发一次渲染
+        if (!m_debounceTimer->isActive()) {
+            m_debounceTimer->start(100);  // 100ms 防抖时间
+        }
+    }
+    
     void render() {
         if (!m_rootItem || !m_window) {
             qWarning() << "渲染失败：根项目或窗口为空";
+            return;
+        }
+        
+        // 如果没有待保存的内容，则不进行保存
+        if (!m_pendingSave) {
             return;
         }
         
@@ -125,23 +147,17 @@ public slots:
         
         qDebug() << "图像获取成功，大小:" << image.size() << "格式:" << image.format();
         
-        // 获取当前时间作为文件名的一部分
-        QString timeStr = QDateTime::currentDateTime().toString("HHmmss");
+        // 获取当前时间作为日志信息
+        QString timeStr = QDateTime::currentDateTime().toString("HH:mm:ss.zzz");
         
         // 保存为BMP文件
         QString savePath = QDir::currentPath() + "/offscreen_output.bmp";
         if (image.save(savePath, "BMP")) {
-            qDebug() << "图像保存成功:" << savePath;
+            qDebug() << timeStr << "图像保存成功:" << savePath;
+            // 重置待保存标志
+            m_pendingSave = false;
         } else {
-            qWarning() << "保存图像失败:" << savePath;
-        }
-        
-        // 同时保存PNG版本
-        QString pngPath = QDir::currentPath() + "/offscreen_output.png";
-        if (image.save(pngPath, "PNG")) {
-            qDebug() << "PNG图像保存成功:" << pngPath;
-        } else {
-            qWarning() << "保存PNG图像失败:" << pngPath;
+            qWarning() << timeStr << "保存图像失败:" << savePath;
         }
     }
     
@@ -149,7 +165,8 @@ private:
     QQmlEngine *m_engine;
     QQuickWindow *m_window;
     QQuickItem *m_rootItem;
-    QTimer *m_timer;
+    QTimer *m_debounceTimer;
+    bool m_pendingSave;  // 标记是否有待保存的内容
 };
 
 int main(int argc, char *argv[])
